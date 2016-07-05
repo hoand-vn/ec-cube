@@ -133,12 +133,11 @@ class PageLayout extends \Eccube\Entity\AbstractEntity
         $Blocks = array();
         foreach ($this->getBlockPositions() as $BlockPositions) {
             if ($BlockPositions->getTargetId() === $target_id) {
-                $priority = $BlockPositions->getBlockRow().$BlockPositions->getBlockId();
+                $priority = str_pad($BlockPositions->getBlockRow(), 4, '0', STR_PAD_RIGHT).str_pad($BlockPositions->getBlockId(), 4, '0', STR_PAD_RIGHT);
                 $Blocks[$priority] = $BlockPositions->getBlock();
             }
         }
         ksort($Blocks);
-//        dump($Blocks);
         return $Blocks;
     }
 
