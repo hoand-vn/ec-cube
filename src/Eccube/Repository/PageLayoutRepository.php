@@ -28,8 +28,8 @@ use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query\Expr;
 use Eccube\Entity\Master\DeviceType;
 use Eccube\Entity\PageLayout;
+use Eccube\Entity\BlockPosition;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Finder\Finder;
 
 /**
  * PageLayoutRepository
@@ -128,7 +128,7 @@ class PageLayoutRepository extends EntityRepository
 
     }
 
-    public function getByUrl(DeviceType $DeviceType, $url)
+    public function getByUrlOld(DeviceType $DeviceType, $url)
     {
         $qb = $this->createQueryBuilder('p')
             ->select('p, bp, b')
@@ -142,7 +142,7 @@ class PageLayoutRepository extends EntityRepository
             ->getQuery()
             ->setParameters(array(
                 'DeviceType' => $DeviceType,
-                'url'  => $url,
+                'url' => $url,
             ))
             ->getSingleResult();
 
@@ -165,25 +165,43 @@ class PageLayoutRepository extends EntityRepository
         foreach ($anyResults as $anyResult) {
             $BlockPositions = $anyResult->getBlockPositions();
             foreach ($BlockPositions as $BlockPosition) {
-
-                $duplicated = $OwnBlockPosition->filter(
-                    function($entry) use ($BlockPosition) {
-                        if( ($entry->getTargetId() == $BlockPosition->getTargetId()) && ( $entry->getBlockId() == $BlockPosition->getBlockId() )  ){
-                            return true;
-                        }
-                    }
-                );
-                if(count($duplicated) > 0){
-                    continue;
-                }
-
-                if (!$OwnBlockPosition->contains($BlockPosition)) {
+                if (!$OwnBlockPosition->contains($BlockPosition)) {//never occur this ?
                     $ownResult->addBlockPosition($BlockPosition);
                 }
             }
         }
-
         return $ownResult;
+    }
+
+    public function getByUrl(DeviceType $DeviceType, $url)
+    {
+        $em = $this
+            ->getEntityManager();
+        $blockRepo = $em->getRepository('Eccube\Entity\BlockPosition');
+        $qb = $blockRepo->createQueryBuilder('bp')
+            ->select('p, bp, b')
+            ->leftJoin('bp.PageLayout', 'p')
+            ->leftJoin('bp.Block', 'b')
+            ->where(' p.DeviceType = :DeviceType AND p.url = :url ')
+            ->orWhere(' p.DeviceType = :DeviceType AND  bp.anywhere = 1 ')
+            ->addOrderBy('bp.target_id', 'ASC')
+            ->addOrderBy('bp.block_row', 'ASC');
+        $ownResults = $qb
+            ->getQuery()
+            ->setParameters(array(
+                'DeviceType' => $DeviceType,
+                'url' => $url,
+            ))
+            ->getResult();
+
+        if (is_array($ownResults)) {
+            $firstLayout = $ownResults[0]->getPageLayout();
+            for ($i = 0; $i < count($ownResults); $i++) {
+                $firstLayout->addBlockPositionKey($ownResults[$i], $ownResults[$i]->getBlockId());
+            }
+            return $firstLayout;
+        }
+
     }
 
     public function newPageLayout(DeviceType $DeviceType)

@@ -68,7 +68,7 @@ class PageLayout extends \Eccube\Entity\AbstractEntity
                 $BlockPositions[] = $BlockPosition;
             }
         }
-
+        
         return $BlockPositions;
     }
 
@@ -133,9 +133,12 @@ class PageLayout extends \Eccube\Entity\AbstractEntity
         $Blocks = array();
         foreach ($this->getBlockPositions() as $BlockPositions) {
             if ($BlockPositions->getTargetId() === $target_id) {
-                $Blocks[] = $BlockPositions->getBlock();
+                $priority = $BlockPositions->getBlockRow().$BlockPositions->getBlockId();
+                $Blocks[$priority] = $BlockPositions->getBlock();
             }
         }
+        ksort($Blocks);
+//        dump($Blocks);
         return $Blocks;
     }
 
@@ -552,10 +555,21 @@ class PageLayout extends \Eccube\Entity\AbstractEntity
     public function addBlockPosition(\Eccube\Entity\BlockPosition $blockPosition)
     {
         $this->BlockPositions[] = $blockPosition;
+        
+        return $this;
+    }
+    public function addBlockPositionKey(\Eccube\Entity\BlockPosition $blockPosition, $key = null)
+    {
+        if( isset($this->BlockPositions[$key]))
+            return $this;
+        if($key)
+            $this->BlockPositions[$key] = $blockPosition;
+        else
+            $this->BlockPositions[] = $blockPosition;
 
         return $this;
     }
-
+    
     /**
      * Remove BlockPosition
      *
